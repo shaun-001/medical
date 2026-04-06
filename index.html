@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>用藥管理系統</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4F1EB;
+    --surface: #FDFCF9;
+    --surface2: #EDE9E0;
+    --border: #D6D0C4;
+    --border-strong: #B8B0A0;
+    --text: #1C1A16;
+    --text-secondary: #6B6458;
+    --text-tertiary: #9C9488;
+    --accent: #2D5016;
+    --accent-light: #EAF3DE;
+    --accent-mid: #639922;
+    --danger: #7A1F1F;
+    --danger-light: #FCEBEB;
+    --danger-mid: #C0392B;
+    --warning: #6B4500;
+    --warning-light: #FAEEDA;
+    --warning-mid: #BA7517;
+    --info: #1A3F6B;
+    --info-light: #E6F1FB;
+    --info-mid: #378ADD;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; font-size: 15px; line-height: 1.6;
+    overflow-x: hidden; padding-bottom: var(--safe-bottom);
+  }
+  /* Header */
+  .site-header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 8px 1rem;
+    padding-left: calc(1rem + var(--safe-left));
+    padding-right: calc(1rem + var(--safe-right));
+    position: -webkit-sticky; position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    min-height: 56px; gap: 8px; flex-wrap: wrap;
+  }
+  .logo { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+  .logo-mark { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--accent); letter-spacing: -0.02em; }
+  .logo-sub { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.08em; text-transform: uppercase; }
+  .header-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  /* Banners */
+  .alert-banner {
+    background: var(--danger-light); border-bottom: 1px solid #F7C1C1;
+    padding: 10px 1rem; display: none; align-items: flex-start;
+    gap: 8px; font-size: 13px; color: var(--danger); flex-wrap: wrap;
+  }
+  .alert-banner.show { display: flex; }
+  .alert-banner .alert-icon { font-size: 15px; flex-shrink: 0; padding-top: 1px; }
+  .alert-banner .alert-items { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+  .alert-chip { background: #F7C1C1; border-radius: 100px; padding: 2px 8px; font-size: 12px; font-weight: 500; color: var(--danger); white-space: nowrap; }
+  .warn-banner {
+    background: var(--warning-light); border-bottom: 1px solid #FAC775;
+    padding: 10px 1rem; display: none; align-items: flex-start;
+    gap: 8px; font-size: 13px; color: var(--warning); flex-wrap: wrap;
+  }
+  .warn-banner.show { display: flex; }
+  .warn-chip { background: #FAC775; border-radius: 100px; padding: 2px 8px; font-size: 12px; font-weight: 500; color: var(--warning); white-space: nowrap; }
+  /* Layout */
+  .main-grid {
+    display: grid; grid-template-columns: 1fr 340px;
+    gap: 20px; max-width: 1200px; margin: 0 auto;
+    padding: 20px 1rem;
+    padding-left: calc(1rem + var(--safe-left));
+    padding-right: calc(1rem + var(--safe-right));
+  }
+  @media (max-width: 860px) { .main-grid { grid-template-columns: 1fr; } }
+  /* Section label */
+  .section-label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px;
+  }
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;
+    position: relative; min-width: 0;
+  }
+  .card.danger { border-color: #F09595; background: #FFFAFA; }
+  .card.warning { border-color: #EF9F27; background: #FFFDF8; }
+  .card.ok { border-left: 3px solid var(--accent-mid); }
+  .card-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 14px; gap: 8px; flex-wrap: wrap;
+  }
+  .med-name-row { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+  .color-pill { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .med-title {
+    font-size: 15px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+  .stock-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 100px; font-size: 12px;
+    font-weight: 500; flex-shrink: 0; white-space: nowrap;
+  }
+  .stock-badge.ok { background: var(--accent-light); color: var(--accent); }
+  .stock-badge.warn { background: var(--warning-light); color: var(--warning); }
+  .stock-badge.danger { background: var(--danger-light); color: var(--danger); }
+  /* Form fields */
+  .fields-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field label { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.04em; }
+  .field input, .field select {
+    height: 44px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg); color: var(--text); font-family: inherit;
+    font-size: 16px; padding: 0 10px; outline: none;
+    -webkit-appearance: none; appearance: none; max-width: 100%;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239C9488' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent-mid); }
+  .field input[type="number"] { width: 80px; }
+  .field input[type="text"]   { width: min(150px, calc(100vw - 4rem)); }
+  .field input[type="time"]   { width: min(130px, calc(100vw - 4rem)); }
+  .field input[type="date"]   { width: min(160px, calc(100vw - 4rem)); }
+  .field select               { width: min(140px, calc(100vw - 4rem)); }
+  @media (max-width: 480px) {
+    .field input[type="text"], .field input[type="date"] { width: 100%; }
+    .fields-row { gap: 8px; }
+  }
+  .field.stock-field input { background: var(--surface); border-color: var(--border-strong); font-family: 'DM Mono', monospace; }
+  /* Progress bar */
+  .stock-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .stock-info { flex: 1; min-width: 0; }
+  .stock-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; gap: 8px; }
+  .stock-days { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .progress-track { height: 6px; background: var(--surface2); border-radius: 100px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 100px; }
+  .progress-fill.ok { background: var(--accent-mid); }
+  .progress-fill.warn { background: var(--warning-mid); }
+  .progress-fill.danger { background: var(--danger-mid); }
+  /* Time tags */
+  .time-section { margin-bottom: 12px; }
+  .time-add-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .time-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .time-tag {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 100px; padding: 5px 10px;
+    font-size: 14px; font-family: 'DM Mono', monospace;
+  }
+  .time-tag .rm {
+    cursor: pointer; color: var(--text-tertiary);
+    line-height: 1; font-size: 20px; padding: 0 3px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .time-tag .rm:active { color: var(--danger-mid); }
+  .time-empty { font-size: 13px; color: var(--text-tertiary); font-style: italic; }
+  /* Buttons */
+  .btn {
+    height: 44px; padding: 0 14px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); font-family: inherit; font-size: 14px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+    white-space: nowrap; -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; -webkit-appearance: none; appearance: none;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-ghost { background: transparent; border-color: transparent; }
+  .btn-sm { height: 36px; padding: 0 12px; font-size: 13px; }
+  .btn-danger-ghost { background: transparent; border-color: transparent; color: var(--danger-mid); }
+  .btn-add-med {
+    width: 100%; height: 52px; border: 1.5px dashed var(--border-strong);
+    background: transparent; border-radius: var(--radius-lg);
+    color: var(--text-secondary); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: inherit; -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; -webkit-appearance: none; appearance: none;
+  }
+  /* Right panel */
+  .right-panel { display: flex; flex-direction: column; gap: 16px; }
+  .panel-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; min-width: 0; }
+  .metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .metric-box { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; min-width: 0; }
+  .metric-label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 2px; }
+  .metric-value { font-size: 22px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .schedule-slot { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .schedule-slot:last-child { border-bottom: none; }
+  .slot-time { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; min-width: 48px; flex-shrink: 0; color: var(--text); }
+  .slot-meds { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .slot-med-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); min-width: 0; }
+  .slot-med-item span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .inv-list { display: flex; flex-direction: column; gap: 7px; }
+  .inv-item { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 8px 10px; border-radius: var(--radius); border: 1px solid transparent; min-width: 0; }
+  .inv-item.ok { background: var(--accent-light); border-color: #C0DD97; }
+  .inv-item.warn { background: var(--warning-light); border-color: #FAC775; }
+  .inv-item.danger { background: var(--danger-light); border-color: #F7C1C1; }
+  .inv-item-name { flex: 1; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .inv-item-days { font-family: 'DM Mono', monospace; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
+  /* Export */
+  .export-btn {
+    width: 100%; min-height: 48px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--bg);
+    display: flex; align-items: center; gap: 10px; padding: 0 14px;
+    font-size: 14px; color: var(--text); cursor: pointer;
+    font-family: inherit; margin-bottom: 8px; text-decoration: none;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .export-btn svg { flex-shrink: 0; }
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(28,26,22,0.5);
+    z-index: 200; display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: 24px 20px calc(24px + var(--safe-bottom));
+    max-width: 600px; width: 100%;
+    border: 1px solid var(--border); border-bottom: none;
+    transform: translateY(20px); transition: transform 0.25s ease;
+    max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .modal-overlay.show .modal { transform: translateY(0); }
+  @media (min-width: 640px) {
+    .modal-overlay { align-items: center; padding: 20px; }
+    .modal { border-radius: var(--radius-xl); border-bottom: 1px solid var(--border); padding: 28px; max-height: 85vh; }
+  }
+  .modal-icon { width: 48px; height: 48px; border-radius: 50%; background: var(--danger-light); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 22px; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 8px; color: var(--danger); }
+  .modal-body { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 16px; }
+  .modal-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .modal-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: var(--radius); background: var(--danger-light); border: 1px solid #F7C1C1; }
+  .modal-item.warn { background: var(--warning-light); border-color: #FAC775; }
+  .modal-item-info { flex: 1; min-width: 0; }
+  .modal-item-name { font-weight: 500; font-size: 14px; color: var(--text); }
+  .modal-item-detail { font-size: 12px; color: var(--text-secondary); margin-top: 2px; word-break: break-all; }
+  .modal-item-days { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+  .modal-item-days.danger { color: var(--danger-mid); }
+  .modal-item-days.warn { color: var(--warning-mid); }
+  /* Inventory overview modal — card layout (no table) */
+  .inv-modal-stat { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+  .inv-modal-stat-box { background: var(--bg); border-radius: var(--radius); padding: 10px 8px; text-align: center; }
+  .inv-modal-stat-box .n { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
+  .inv-modal-stat-box .l { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .inv-row-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .inv-row-card { border-radius: var(--radius); border: 1px solid var(--border); padding: 10px 12px; }
+  .inv-row-card.row-danger { background: var(--danger-light); border-color: #F7C1C1; }
+  .inv-row-card.row-warn { background: var(--warning-light); border-color: #FAC775; }
+  .inv-row-card.row-ok { background: var(--surface); }
+  .inv-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+  .inv-row-name { display: flex; align-items: center; gap: 7px; font-weight: 500; font-size: 14px; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inv-row-status { font-size: 13px; flex-shrink: 0; white-space: nowrap; }
+  .inv-row-bottom { display: flex; gap: 12px; flex-wrap: wrap; }
+  .inv-row-stat { font-size: 12px; color: var(--text-secondary); display: flex; gap: 4px; align-items: center; }
+  .inv-row-stat span { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); }
+  /* Save indicator */
+  .save-indicator { font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-mid); flex-shrink: 0; }
+  .save-dot.saving { background: var(--warning-mid); animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .modal-gcal-link {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    border-radius: var(--radius); background: var(--info-light);
+    border: 1px solid #B5D4F4; font-size: 14px; color: var(--info);
+    text-decoration: none; margin-bottom: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--text-tertiary); font-size: 14px; }
+  .empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  @media (max-width: 480px) {
+    .logo-sub { display: none; }
+    .main-grid { padding: 14px 0.75rem; gap: 14px; }
+    .card, .panel-card { padding: 14px; }
+    .btn-sm { height: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="site-header">
+  <div class="logo">
+    <span class="logo-mark">MediCal</span>
+    <span class="logo-sub">用藥管理系統</span>
+  </div>
+  <div class="header-actions">
+    <div class="save-indicator" id="save-indicator">
+      <div class="save-dot" id="save-dot"></div>
+      <span id="save-label">已儲存</span>
+    </div>
+    <button class="btn btn-sm" onclick="openInvOverview()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      庫存總覽
+    </button>
+    <button class="btn btn-sm" onclick="exportICS()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+      匯出 .ics
+    </button>
+    <button class="btn btn-primary btn-sm" onclick="checkAlerts(true)">
+      檢查庫存
+    </button>
+  </div>
+</header>
+
+<!-- Alert banners -->
+<div class="alert-banner" id="danger-banner">
+  <span class="alert-icon">⚠</span>
+  <strong style="white-space:nowrap">庫存不足：</strong>
+  <div class="alert-items" id="danger-chips"></div>
+</div>
+<div class="warn-banner" id="warn-banner">
+  <span style="flex-shrink:0">⏳</span>
+  <strong style="white-space:nowrap">即將用完（7天內）：</strong>
+  <div class="alert-items" id="warn-chips"></div>
+</div>
+
+<div class="main-grid">
+  <!-- LEFT: med cards -->
+  <div>
+    <div class="section-label">藥物設定</div>
+    <div id="med-list"></div>
+    <button class="btn-add-med" onclick="addMed()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      新增藥物
+    </button>
+  </div>
+
+  <!-- RIGHT: summary -->
+  <div class="right-panel">
+
+    <!-- Metrics -->
+    <div class="panel-card">
+      <div class="section-label">今日概覽</div>
+      <div class="metrics-row" id="metrics-row">
+        <div class="metric-box"><div class="metric-label">藥物種類</div><div class="metric-value" id="m-kinds">0</div></div>
+        <div class="metric-box"><div class="metric-label">每日劑次</div><div class="metric-value" id="m-doses">0</div></div>
+        <div class="metric-box"><div class="metric-label">庫存警告</div><div class="metric-value" style="color:var(--danger-mid)" id="m-alerts">0</div></div>
+        <div class="metric-box"><div class="metric-label">即將用完</div><div class="metric-value" style="color:var(--warning-mid)" id="m-warns">0</div></div>
+      </div>
+
+      <div class="section-label">今日時程</div>
+      <div id="schedule-list"><div class="empty-state"><div class="empty-icon">📋</div>尚未設定藥物與時間</div></div>
+    </div>
+
+    <!-- Inventory summary -->
+    <div class="panel-card">
+      <div class="section-label">庫存狀態</div>
+      <div id="inv-summary"><div class="empty-state"><div class="empty-icon">📦</div>設定庫存後顯示</div></div>
+    </div>
+
+    <!-- Export -->
+    <div class="panel-card">
+      <div class="section-label">匯出行事曆</div>
+      <button class="export-btn" onclick="exportICS()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+        下載 .ics 行事曆檔案
+      </button>
+      <div id="gcal-links-panel"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Inventory Overview Modal -->
+<div class="modal-overlay" id="inv-modal">
+  <div class="modal" style="max-width:600px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div>
+        <div class="modal-title" style="color:var(--text);font-size:20px;margin-bottom:2px;">庫存總覽</div>
+        <div style="font-size:12px;color:var(--text-tertiary)" id="inv-modal-date"></div>
+      </div>
+      <button class="btn btn-sm" onclick="closeInvModal()">關閉</button>
+    </div>
+    <div class="inv-modal-stat" id="inv-modal-stat"></div>
+    <div class="inv-row-list" id="inv-modal-body"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="closeInvModal()" style="flex:1">確認</button>
+      <button class="btn" onclick="closeInvModal();checkAlerts(true)" style="flex:1">檢查警示</button>
+    </div>
+  </div>
+</div>
+
+<!-- Alert Modal -->
+<div class="modal-overlay" id="alert-modal">
+  <div class="modal">
+    <div class="modal-icon">⚠</div>
+    <div class="modal-title" id="modal-title">庫存警示</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-items" id="modal-items"></div>
+    <button class="btn btn-primary" onclick="closeModal()" style="width:100%">確認</button>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#2D8A4E','#2872C4','#C0530D','#8B3A8B','#B8860B','#C0395A','#1A7A7A'];
+let meds = [];
+let medId = 0;
+
+/* ── localStorage persistence ── */
+const STORAGE_KEY = 'medical_meds_v1';
+let saveTimer = null;
+
+function saveData() {
+  const dot = document.getElementById('save-dot');
+  const lbl = document.getElementById('save-label');
+  if (dot) dot.classList.add('saving');
+  if (lbl) lbl.textContent = '儲存中…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ meds, medId }));
+      if (dot) dot.classList.remove('saving');
+      if (lbl) lbl.textContent = '已儲存 ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    } catch(e) {
+      if (lbl) lbl.textContent = '儲存失敗';
+    }
+  }, 600);
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.meds) && parsed.meds.length) {
+      meds = parsed.meds;
+      medId = parsed.medId || meds.reduce((mx, m) => Math.max(mx, m.id), 0);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function addMed() {
+  const id = ++medId;
+  meds.push({
+    id, name: '', dose: 1, unit: '顆', times: [],
+    repeat: 'daily', startDate: today(),
+    stock: '', alertDays: 7,
+    color: COLORS[(id - 1) % COLORS.length]
+  });
+  render();
+  setTimeout(() => { const el = document.getElementById('n' + id); if (el) el.focus(); }, 60);
+}
+
+function removeMed(id) { meds = meds.filter(m => m.id !== id); render(); }
+
+/* setField: for text inputs — update data + patch only dynamic parts of the card, no full re-render */
+function setField(id, k, v) {
+  const m = meds.find(m => m.id === id);
+  if (!m) return;
+  m[k] = v;
+  /* patch card header title */
+  const titleEl = document.querySelector(`#card${id} .med-title`);
+  if (titleEl) titleEl.textContent = m.name || '（未命名藥物）';
+  /* update right panel and banners without touching med cards */
+  renderRight();
+  checkAlerts(false);
+  saveData();
+}
+
+/* set: for selects, numbers, dates — full render is safe because focus leaves anyway */
+function set(id, k, v) { const m = meds.find(m => m.id === id); if (m) { m[k] = v; render(); } }
+
+function addTime(id) {
+  const inp = document.getElementById('ti' + id);
+  if (!inp || !inp.value) return;
+  const m = meds.find(m => m.id === id);
+  if (m && !m.times.includes(inp.value)) { m.times.push(inp.value); m.times.sort(); inp.value = ''; render(); }
+}
+function removeTime(id, t) { const m = meds.find(m => m.id === id); if (m) { m.times = m.times.filter(x => x !== t); render(); } }
+
+/* ── Inventory calc ── */
+function dailyDose(m) { return m.times.length * Number(m.dose || 0); }
+function daysLeft(m) {
+  const dd = dailyDose(m);
+  if (!dd || m.stock === '' || m.stock === null) return null;
+  return Math.floor(Number(m.stock) / dd);
+}
+function stockStatus(m) {
+  const d = daysLeft(m);
+  if (d === null) return 'none';
+  if (d <= 0) return 'danger';
+  if (d <= Number(m.alertDays)) return 'warn';
+  return 'ok';
+}
+
+/* ── Render all ── */
+function render() {
+  renderMeds();
+  renderRight();
+  checkAlerts(false);
+  saveData();
+}
+
+function renderMeds() {
+  const c = document.getElementById('med-list');
+  if (!meds.length) { c.innerHTML = ''; return; }
+  c.innerHTML = meds.map(m => {
+    const dl = daysLeft(m);
+    const ss = stockStatus(m);
+    const cardCls = ss === 'danger' ? 'card danger' : ss === 'warn' ? 'card warning' : ss === 'ok' ? 'card ok' : 'card';
+    const badgeHtml = dl !== null
+      ? `<span class="stock-badge ${ss === 'ok' ? 'ok' : ss === 'warn' ? 'warn' : ss === 'danger' ? 'danger' : ''}">
+          ${ ss === 'danger' ? '庫存不足' : ss === 'warn' ? `剩 ${dl} 天` : `剩 ${dl} 天` }
+         </span>` : '';
+
+    const pct = dl !== null ? Math.min(100, Math.round(dl / Math.max(Number(m.alertDays) * 3, 30) * 100)) : 0;
+    const fillCls = ss === 'danger' ? 'danger' : ss === 'warn' ? 'warn' : 'ok';
+
+    return `
+    <div class="${cardCls}" id="card${m.id}">
+      <div class="card-head">
+        <div class="med-name-row">
+          <div class="color-pill" style="background:${m.color}"></div>
+          <span class="med-title">${m.name || '（未命名藥物）'}</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${badgeHtml}
+          <button class="btn btn-sm btn-danger-ghost" onclick="removeMed(${m.id})">刪除</button>
+        </div>
+      </div>
+
+      <!-- Basic info -->
+      <div class="fields-row">
+        <div class="field">
+          <label>藥物名稱</label>
+          <input type="text" id="n${m.id}" placeholder="例：降血壓藥" value="${m.name}" oninput="setField(${m.id},'name',this.value)">
+        </div>
+        <div class="field">
+          <label>每次劑量</label>
+          <input type="number" min="0.5" step="0.5" value="${m.dose}" oninput="set(${m.id},'dose',this.value)">
+        </div>
+        <div class="field">
+          <label>單位</label>
+          <select onchange="set(${m.id},'unit',this.value)">
+            <option value="顆" ${m.unit==='顆'?'selected':''}>顆</option>
+            <option value="mg" ${m.unit==='mg'?'selected':''}>mg</option>
+            <option value="ml" ${m.unit==='ml'?'selected':''}>ml</option>
+            <option value="片" ${m.unit==='片'?'selected':''}>片</option>
+            <option value="滴" ${m.unit==='滴'?'selected':''}>滴</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>服用週期</label>
+          <select onchange="set(${m.id},'repeat',this.value)">
+            <option value="daily" ${m.repeat==='daily'?'selected':''}>每天</option>
+            <option value="weekdays" ${m.repeat==='weekdays'?'selected':''}>週一~五</option>
+            <option value="weekly" ${m.repeat==='weekly'?'selected':''}>每週</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>開始日期</label>
+          <input type="date" value="${m.startDate}" oninput="set(${m.id},'startDate',this.value)" style="width:145px">
+        </div>
+      </div>
+
+      <!-- Times -->
+      <div class="time-section">
+        <div style="font-size:11px;color:var(--text-tertiary);letter-spacing:.04em;margin-bottom:6px;">服用時間</div>
+        <div class="time-add-row">
+          <input type="time" id="ti${m.id}" style="height:32px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:0 8px;outline:none;width:110px;">
+          <button class="btn btn-sm" onclick="addTime(${m.id})">+ 加入</button>
+        </div>
+        <div class="time-tags">
+          ${m.times.length ? m.times.map(t => `
+            <div class="time-tag">
+              <span>${t}</span>
+              <span class="rm" onclick="removeTime(${m.id},'${t}')">&times;</span>
+            </div>
+          `).join('') : '<span class="time-empty">尚未設定時間</span>'}
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Stock -->
+      <div style="font-size:11px;color:var(--text-tertiary);letter-spacing:.04em;margin-bottom:10px;">庫存管理</div>
+      <div class="fields-row">
+        <div class="field stock-field">
+          <label>目前庫存（${m.unit}）</label>
+          <input type="number" min="0" step="1" placeholder="輸入庫存量" value="${m.stock}"
+            oninput="setField(${m.id},'stock',this.value)" onblur="render()">
+        </div>
+        <div class="field">
+          <label>警告閾值（天）</label>
+          <input type="number" min="1" step="1" value="${m.alertDays}"
+            oninput="setField(${m.id},'alertDays',this.value)" onblur="render()" style="width:80px">
+        </div>
+        ${m.times.length && m.dose ? `
+        <div class="field" style="justify-content:flex-end">
+          <label>每日消耗</label>
+          <div style="height:36px;display:flex;align-items:center;font-family:'DM Mono',monospace;font-size:14px;color:var(--text-secondary);">
+            ${dailyDose(m)} ${m.unit}/天
+          </div>
+        </div>` : ''}
+      </div>
+
+      ${dl !== null ? `
+      <div class="stock-row">
+        <div class="stock-info">
+          <div class="stock-meta">
+            <span>庫存可用天數</span>
+            <span class="stock-days" style="color:${ss==='danger'?'var(--danger-mid)':ss==='warn'?'var(--warning-mid)':'var(--accent-mid)'}">${dl} 天</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill ${fillCls}" style="width:${pct}%"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">
+            庫存 ${m.stock} ${m.unit}　每天 ${dailyDose(m)} ${m.unit}　警告閾值 ${m.alertDays} 天
+          </div>
+        </div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderRight() {
+  const valid = meds.filter(m => m.name && m.times.length);
+  // metrics
+  document.getElementById('m-kinds').textContent = valid.length;
+  const totalDoses = valid.reduce((s, m) => s + m.times.length, 0);
+  document.getElementById('m-doses').textContent = totalDoses;
+  const dangerCount = valid.filter(m => stockStatus(m) === 'danger').length;
+  const warnCount = valid.filter(m => stockStatus(m) === 'warn').length;
+  document.getElementById('m-alerts').textContent = dangerCount;
+  document.getElementById('m-warns').textContent = warnCount;
+
+  // schedule
+  const slots = [];
+  valid.forEach(m => m.times.forEach(t => slots.push({ t, m })));
+  slots.sort((a, b) => a.t.localeCompare(b.t));
+  const grouped = {};
+  slots.forEach(({ t, m }) => { if (!grouped[t]) grouped[t] = []; grouped[t].push(m); });
+  const el = document.getElementById('schedule-list');
+  if (!slots.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>尚未設定藥物與時間</div>'; }
+  else {
+    el.innerHTML = Object.entries(grouped).map(([t, ms]) => `
+      <div class="schedule-slot">
+        <span class="slot-time">${t}</span>
+        <div class="slot-meds">
+          ${ms.map(m => `<div class="slot-med-item"><div class="slot-dot" style="background:${m.color}"></div>${m.name} ${m.dose}${m.unit}</div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  // inventory summary
+  const inv = document.getElementById('inv-summary');
+  const withStock = valid.filter(m => m.stock !== '' && m.stock !== null);
+  if (!withStock.length) { inv.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div>設定庫存後顯示</div>'; }
+  else {
+    inv.innerHTML = '<div class="inv-list">' + withStock.sort((a,b) => {
+      const sa = stockStatus(a), sb = stockStatus(b);
+      const ord = { danger: 0, warn: 1, ok: 2, none: 3 };
+      return ord[sa] - ord[sb];
+    }).map(m => {
+      const dl = daysLeft(m), ss = stockStatus(m);
+      return `<div class="inv-item ${ss}">
+        <div class="color-pill" style="background:${m.color}"></div>
+        <span class="inv-item-name">${m.name}</span>
+        <span class="inv-item-days" style="color:${ss==='danger'?'var(--danger-mid)':ss==='warn'?'var(--warning-mid)':'var(--accent-mid)'}">
+          ${ss==='danger'?'不足':'剩 '+dl+' 天'}
+        </span>
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  // gcal links
+  const glp = document.getElementById('gcal-links-panel');
+  if (!valid.length) { glp.innerHTML = ''; return; }
+  const links = [];
+  valid.forEach(m => {
+    m.times.forEach(t => {
+      const [y, mo, d] = m.startDate.split('-');
+      const [h, mn] = t.split(':');
+      const eh = parseInt(h) + (parseInt(mn) + 15 >= 60 ? 1 : 0);
+      const em = (parseInt(mn) + 15) % 60;
+      const dates = `${y}${mo}${d}T${h}${mn}00/${y}${mo}${d}T${String(eh).padStart(2,'0')}${String(em).padStart(2,'0')}00`;
+      const text = encodeURIComponent(`💊 ${m.name} ${m.dose}${m.unit}`);
+      const recur = m.repeat==='daily'?'RRULE:FREQ%3DDAILY':m.repeat==='weekdays'?'RRULE:FREQ%3DWEEKLY;BYDAY%3DMO,TU,WE,TH,FR':'RRULE:FREQ%3DWEEKLY';
+      links.push({ label: `${m.name} ${t}`, url: `https://www.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&recur=${recur}` });
+    });
+  });
+  glp.innerHTML = links.map(l => `
+    <a class="modal-gcal-link" href="${l.url}" target="_blank">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      ${l.label} ↗
+    </a>`).join('');
+}
+
+/* ── Alert system ── */
+function checkAlerts(showModal) {
+  const valid = meds.filter(m => m.name && m.times.length && m.stock !== '');
+  const dangers = valid.filter(m => stockStatus(m) === 'danger');
+  const warns = valid.filter(m => stockStatus(m) === 'warn');
+
+  // banners
+  const db = document.getElementById('danger-banner');
+  const wb = document.getElementById('warn-banner');
+  const dc = document.getElementById('danger-chips');
+  const wc = document.getElementById('warn-chips');
+
+  if (dangers.length) {
+    db.classList.add('show');
+    dc.innerHTML = dangers.map(m => `<span class="alert-chip">${m.name}</span>`).join('');
+  } else { db.classList.remove('show'); }
+
+  if (warns.length) {
+    wb.classList.add('show');
+    wc.innerHTML = warns.map(m => `<span class="warn-chip">${m.name} 剩${daysLeft(m)}天</span>`).join('');
+  } else { wb.classList.remove('show'); }
+
+  if (showModal && (dangers.length || warns.length)) {
+    openAlertModal(dangers, warns);
+  } else if (showModal) {
+    openOkModal();
+  }
+}
+
+function openAlertModal(dangers, warns) {
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const items = document.getElementById('modal-items');
+  const modal = document.getElementById('alert-modal');
+
+  title.textContent = dangers.length ? '庫存不足警示' : '庫存即將用完';
+  title.style.color = dangers.length ? 'var(--danger)' : 'var(--warning)';
+  document.querySelector('.modal-icon').style.background = dangers.length ? 'var(--danger-light)' : 'var(--warning-light)';
+  document.querySelector('.modal-icon').textContent = dangers.length ? '⚠' : '⏳';
+
+  const allItems = [...dangers.map(m => ({ m, type: 'danger' })), ...warns.map(m => ({ m, type: 'warn' }))];
+  body.textContent = `以下 ${allItems.length} 種藥物庫存狀態需要注意，請盡快補充：`;
+  items.innerHTML = allItems.map(({ m, type }) => {
+    const dl = daysLeft(m);
+    return `<div class="modal-item ${type === 'warn' ? 'warn' : ''}">
+      <div class="color-pill" style="background:${m.color};width:10px;height:10px;border-radius:50%;flex-shrink:0"></div>
+      <div class="modal-item-info">
+        <div class="modal-item-name">${m.name}</div>
+        <div class="modal-item-detail">庫存 ${m.stock}${m.unit}　每日 ${dailyDose(m)}${m.unit}　警告閾值 ${m.alertDays} 天</div>
+      </div>
+      <span class="modal-item-days ${type}">${type==='danger'?'已不足':'剩 '+dl+' 天'}</span>
+    </div>`;
+  }).join('');
+
+  modal.classList.add('show');
+}
+
+function openOkModal() {
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const items = document.getElementById('modal-items');
+  title.textContent = '庫存狀態良好';
+  title.style.color = 'var(--accent)';
+  document.querySelector('.modal-icon').style.background = 'var(--accent-light)';
+  document.querySelector('.modal-icon').textContent = '✓';
+  body.textContent = '所有已設定庫存的藥物均在安全範圍內，無需立即補充。';
+  items.innerHTML = '';
+  document.getElementById('alert-modal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('alert-modal').classList.remove('show'); }
+document.getElementById('alert-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+/* ── ICS export ── */
+function fmtICS(dateStr, timeStr) {
+  const [y,mo,d] = dateStr.split('-'), [h,mn] = timeStr.split(':');
+  return `${y}${mo}${d}T${h}${mn}00`;
+}
+function rrule(r) {
+  return r==='daily'?'RRULE:FREQ=DAILY':r==='weekdays'?'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR':'RRULE:FREQ=WEEKLY';
+}
+function exportICS() {
+  const valid = meds.filter(m => m.name && m.times.length);
+  if (!valid.length) { alert('請先設定至少一種藥物與服用時間'); return; }
+  let uid = Date.now(), events = [];
+  valid.forEach(m => {
+    m.times.forEach(t => {
+      const [h,mn] = t.split(':');
+      const eh = parseInt(h)+(parseInt(mn)+15>=60?1:0);
+      const em = (parseInt(mn)+15)%60;
+      const tend = `${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`;
+      events.push([
+        'BEGIN:VEVENT',
+        `UID:med-${++uid}@medical`,
+        `DTSTART:${fmtICS(m.startDate,t)}`,
+        `DTEND:${fmtICS(m.startDate,tend)}`,
+        `SUMMARY:💊 ${m.name} ${m.dose}${m.unit}`,
+        `DESCRIPTION:服用 ${m.name}，劑量：${m.dose}${m.unit}`,
+        rrule(m.repeat),
+        'BEGIN:VALARM','TRIGGER:-PT5M','ACTION:DISPLAY',
+        `DESCRIPTION:提醒：${m.name} ${m.dose}${m.unit}`,
+        'END:VALARM','END:VEVENT'
+      ].join('\r\n'));
+    });
+  });
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//MediCal//ZH','CALSCALE:GREGORIAN','METHOD:PUBLISH',...events,'END:VCALENDAR'].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([ics],{type:'text/calendar;charset=utf-8'}));
+  a.download = '用藥時程.ics'; a.click();
+}
+
+
+
+/* ── Inventory Overview Modal ── */
+function openInvOverview() {
+  const now = new Date();
+  document.getElementById('inv-modal-date').textContent =
+    now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+
+  const all = meds.filter(m => m.name);
+  const withStock = all.filter(m => m.stock !== '' && m.stock !== null && m.times.length);
+  const noStock = all.filter(m => m.stock === '' || m.stock === null || !m.times.length);
+
+  const dangerN = withStock.filter(m => stockStatus(m) === 'danger').length;
+  const warnN   = withStock.filter(m => stockStatus(m) === 'warn').length;
+
+  document.getElementById('inv-modal-stat').innerHTML = `
+    <div class="inv-modal-stat-box">
+      <div class="n">${all.length}</div><div class="l">藥物總數</div>
+    </div>
+    <div class="inv-modal-stat-box">
+      <div class="n" style="color:var(--danger-mid)">${dangerN}</div><div class="l">庫存不足</div>
+    </div>
+    <div class="inv-modal-stat-box">
+      <div class="n" style="color:var(--warning-mid)">${warnN}</div><div class="l">即將用完</div>
+    </div>`;
+
+  const sorted = [...withStock].sort((a, b) => {
+    const ord = { danger: 0, warn: 1, ok: 2 };
+    return (ord[stockStatus(a)] ?? 3) - (ord[stockStatus(b)] ?? 3);
+  });
+
+  const cards = sorted.map(m => {
+    const dl = daysLeft(m);
+    const ss = stockStatus(m);
+    const statusText = ss === 'danger' ? '🔴 庫存不足' : ss === 'warn' ? '🟡 即將用完' : '🟢 庫存充足';
+    const rowCls = ss === 'danger' ? 'row-danger' : ss === 'warn' ? 'row-warn' : 'row-ok';
+    const daysColor = ss === 'danger' ? 'var(--danger-mid)' : ss === 'warn' ? 'var(--warning-mid)' : 'var(--accent-mid)';
+    return `<div class="inv-row-card ${rowCls}">
+      <div class="inv-row-top">
+        <div class="inv-row-name">
+          <span style="width:9px;height:9px;border-radius:50%;background:${m.color};display:inline-block;flex-shrink:0"></span>
+          ${m.name}
+        </div>
+        <div class="inv-row-status" style="color:${daysColor};font-weight:500">
+          ${dl !== null ? dl + ' 天' : statusText}
+        </div>
+      </div>
+      <div class="inv-row-bottom">
+        <div class="inv-row-stat">每次 <span>${m.dose} ${m.unit}</span></div>
+        <div class="inv-row-stat">每日 <span>${dailyDose(m)} ${m.unit}</span></div>
+        <div class="inv-row-stat">庫存 <span>${m.stock} ${m.unit}</span></div>
+        <div class="inv-row-stat">${statusText}</div>
+      </div>
+    </div>`;
+  });
+
+  if (noStock.length) {
+    cards.push(`<div style="padding:10px 12px;color:var(--text-tertiary);font-size:13px;font-style:italic;">
+      尚未設定庫存或時間：${noStock.map(m => m.name || '未命名').join('、')}
+    </div>`);
+  }
+
+  const body = document.getElementById('inv-modal-body');
+  if (!cards.length) {
+    body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:14px;">尚未設定任何藥物</div>';
+  } else {
+    body.innerHTML = cards.join('');
+  }
+
+  document.getElementById('inv-modal').classList.add('show');
+}
+
+function closeInvModal() { document.getElementById('inv-modal').classList.remove('show'); }
+document.getElementById('inv-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeInvModal();
+});
+
+
+
+// init: load from storage or show sample
+const loaded = loadData();
+if (loaded) {
+  render();
+  document.getElementById('save-label').textContent = '資料已從本機載入';
+} else {
+  // sample data for first run
+  addMed();
+  setTimeout(() => {
+    const m = meds[0];
+    m.name = '降血壓藥'; m.dose = 1; m.unit = '顆'; m.stock = 5; m.alertDays = 7;
+    setTimeout(() => {
+      const inp = document.getElementById('ti' + m.id);
+      if (inp) { inp.value = '08:00'; addTime(m.id); }
+      setTimeout(() => {
+        const inp2 = document.getElementById('ti' + m.id);
+        if (inp2) { inp2.value = '20:00'; addTime(m.id); }
+      }, 10);
+    }, 10);
+  }, 50);
+}
+</script>
+</body>
+</html>
