@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>MediCal 用藥管理</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F2EFE9;
+  --surface: #FDFCF9;
+  --surface2: #EAE6DC;
+  --border: #D4CEC4;
+  --border-strong: #B4ADA0;
+  --text: #1A1814;
+  --text-2: #635C52;
+  --text-3: #968E84;
+  --accent: #2D5016;
+  --accent-l: #EAF3DE;
+  --accent-m: #5A8F1A;
+  --danger: #7A1F1F;
+  --danger-l: #FDF0F0;
+  --danger-m: #C0392B;
+  --warn: #6B4500;
+  --warn-l: #FDF6EA;
+  --warn-m: #BA7517;
+  --r: 10px; --rl: 16px; --rxl: 20px;
+  --safe-b: env(safe-area-inset-bottom,0px);
+  --safe-l: env(safe-area-inset-left,0px);
+  --safe-r: env(safe-area-inset-right,0px);
+  --nav-h: 60px;
+}
+html { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+*{ box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Noto Sans TC',sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; font-size:15px; line-height:1.6;
+  overflow-x:hidden;
+  padding-bottom:calc(var(--nav-h) + var(--safe-b) + 8px);
+}
+
+/* ── TOP HEADER ── */
+.top-bar {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:10px 1rem;
+  padding-left:calc(1rem + var(--safe-l));
+  padding-right:calc(1rem + var(--safe-r));
+  position:-webkit-sticky; position:sticky; top:0; z-index:80;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.logo-mark { font-family:'DM Serif Display',serif; font-size:20px; color:var(--accent); letter-spacing:-0.02em; }
+.logo-sub { font-size:11px; color:var(--text-3); letter-spacing:0.08em; margin-left:8px; }
+.top-actions { display:flex; gap:6px; }
+.save-dot-wrap { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-3); }
+.save-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-m); flex-shrink:0; }
+.save-dot.saving { background:var(--warn-m); animation:pulse .8s infinite; }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; z-index:80;
+  background:var(--surface); border-top:1px solid var(--border);
+  display:flex; align-items:stretch;
+  height:calc(var(--nav-h) + var(--safe-b));
+  padding-bottom:var(--safe-b);
+  padding-left:var(--safe-l); padding-right:var(--safe-r);
+}
+.nav-item {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:3px; padding:6px 4px;
+  font-size:11px; color:var(--text-3); cursor:pointer;
+  -webkit-tap-highlight-color:transparent; background:none; border:none;
+  font-family:inherit; transition:color .15s;
+}
+.nav-item.active { color:var(--accent); }
+.nav-item svg { flex-shrink:0; }
+.nav-add {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  background:none; border:none; font-family:inherit;
+}
+.nav-add-circle {
+  width:48px; height:48px; border-radius:50%;
+  background:var(--accent); display:flex; align-items:center; justify-content:center;
+  margin-top:-20px; box-shadow:0 2px 12px rgba(45,80,22,.35);
+}
+
+/* ── PAGES ── */
+.page { display:none; padding:20px 1rem; max-width:720px; margin:0 auto; }
+.page.active { display:block; }
+.page-title { font-family:'DM Serif Display',serif; font-size:24px; color:var(--text); margin-bottom:4px; }
+.page-sub { font-size:13px; color:var(--text-3); margin-bottom:20px; }
+
+/* ── DASHBOARD ── */
+.dash-greeting { margin-bottom:20px; }
+.dash-date { font-size:12px; color:var(--text-3); margin-bottom:2px; }
+.dash-title { font-family:'DM Serif Display',serif; font-size:22px; }
+.stat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px; }
+.stat-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--rl); padding:14px 16px;
+}
+.stat-card.danger { background:var(--danger-l); border-color:#F0AAAA; }
+.stat-card.warn { background:var(--warn-l); border-color:#EFC97A; }
+.stat-card.ok { background:var(--accent-l); border-color:#B5D97A; }
+.stat-n { font-family:'DM Mono',monospace; font-size:32px; font-weight:500; line-height:1.1; margin-bottom:2px; }
+.stat-label { font-size:12px; color:var(--text-2); }
+.section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.section-title { font-size:11px; font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); }
+.link-btn { font-size:12px; color:var(--accent); background:none; border:none; cursor:pointer; font-family:inherit; padding:0; }
+
+/* Schedule slots */
+.schedule-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--rl); overflow:hidden; margin-bottom:14px;
+}
+.schedule-slot { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border); }
+.schedule-slot:last-child { border-bottom:none; }
+.slot-time { font-family:'DM Mono',monospace; font-size:15px; font-weight:500; min-width:50px; flex-shrink:0; padding-top:1px; }
+.slot-pills { display:flex; flex-direction:column; gap:4px; flex:1; }
+.slot-pill-row { display:flex; align-items:center; gap:6px; font-size:13px; }
+.slot-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+/* Inventory dashboard cards */
+.inv-grid { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+.inv-dash-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); padding:12px 14px;
+  display:flex; align-items:center; gap:12px;
+}
+.inv-dash-card.danger { background:var(--danger-l); border-color:#F0AAAA; }
+.inv-dash-card.warn { background:var(--warn-l); border-color:#EFC97A; }
+.inv-dash-card.ok { border-left:3px solid var(--accent-m); }
+.inv-color { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.inv-info { flex:1; min-width:0; }
+.inv-name { font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.inv-detail { font-size:12px; color:var(--text-2); margin-top:1px; }
+.inv-days {
+  font-family:'DM Mono',monospace; font-size:13px; font-weight:500;
+  flex-shrink:0; white-space:nowrap; text-align:right;
+}
+.inv-bar-wrap { margin-top:6px; }
+.inv-bar-track { height:4px; background:var(--surface2); border-radius:100px; overflow:hidden; }
+.inv-bar-fill { height:100%; border-radius:100px; }
+.inv-bar-fill.ok { background:var(--accent-m); }
+.inv-bar-fill.warn { background:var(--warn-m); }
+.inv-bar-fill.danger { background:var(--danger-m); }
+
+/* ── MED LIST PAGE ── */
+.med-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--rl); padding:14px 16px; margin-bottom:10px;
+  display:flex; align-items:center; gap:12px;
+}
+.med-card-color { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.med-card-info { flex:1; min-width:0; }
+.med-card-name { font-size:15px; font-weight:500; }
+.med-card-sub { font-size:12px; color:var(--text-2); margin-top:2px; }
+.med-card-actions { display:flex; gap:6px; flex-shrink:0; }
+.icon-btn {
+  width:36px; height:36px; border-radius:var(--r); border:1px solid var(--border);
+  background:var(--surface); color:var(--text-2); display:flex; align-items:center;
+  justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  -webkit-appearance:none; appearance:none;
+}
+.icon-btn.danger { color:var(--danger-m); border-color:transparent; background:transparent; }
+
+/* ── STOCK PAGE ── */
+.stock-section-title { font-size:14px; font-weight:500; color:var(--text); margin-bottom:10px; }
+.stock-batch-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--rl); overflow:hidden; margin-bottom:14px;
+}
+.stock-batch-row {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 16px; border-bottom:1px solid var(--border);
+}
+.stock-batch-row:last-child { border-bottom:none; }
+.stock-batch-info { flex:1; min-width:0; }
+.stock-batch-name { font-size:14px; font-weight:500; }
+.stock-batch-meta { font-size:12px; color:var(--text-2); }
+.stock-batch-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+.stock-num-input {
+  width:90px; height:40px; text-align:right;
+  font-family:'DM Mono',monospace; font-size:16px;
+  border:1px solid var(--border-strong); border-radius:var(--r);
+  background:var(--bg); color:var(--text);
+  padding:0 10px; outline:none;
+  -webkit-appearance:none; appearance:none;
+}
+.stock-num-input:focus { border-color:var(--accent-m); }
+.stock-status-chip {
+  font-size:11px; padding:2px 8px; border-radius:100px; white-space:nowrap;
+}
+.stock-status-chip.ok { background:var(--accent-l); color:var(--accent); }
+.stock-status-chip.warn { background:var(--warn-l); color:var(--warn); }
+.stock-status-chip.danger { background:var(--danger-l); color:var(--danger); }
+.stock-status-chip.none { background:var(--surface2); color:var(--text-3); }
+
+/* ICS export section */
+.ics-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--rl); padding:16px; margin-bottom:10px;
+}
+.ics-desc { font-size:13px; color:var(--text-2); margin-bottom:12px; line-height:1.6; }
+.ics-btn {
+  width:100%; min-height:48px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--bg);
+  display:flex; align-items:center; gap:10px; padding:0 16px;
+  font-size:14px; color:var(--text); cursor:pointer; font-family:inherit;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  -webkit-appearance:none; appearance:none;
+}
+
+/* ── MODALS ── */
+.overlay {
+  position:fixed; inset:0; background:rgba(20,18,14,.52);
+  z-index:200; display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.overlay.show { opacity:1; pointer-events:all; }
+.sheet {
+  background:var(--surface); border-radius:var(--rxl) var(--rxl) 0 0;
+  width:100%; max-width:600px;
+  padding:0 0 calc(var(--safe-b) + 16px);
+  max-height:92vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  transform:translateY(24px); transition:transform .25s ease;
+  border:1px solid var(--border); border-bottom:none;
+}
+.overlay.show .sheet { transform:translateY(0); }
+@media(min-width:640px){
+  .overlay { align-items:center; padding:20px; }
+  .sheet { border-radius:var(--rxl); border-bottom:1px solid var(--border); max-height:88vh; }
+}
+.sheet-handle { width:36px; height:4px; background:var(--border-strong); border-radius:100px; margin:12px auto 0; }
+.sheet-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px 0; margin-bottom:16px;
+}
+.sheet-title { font-family:'DM Serif Display',serif; font-size:20px; }
+.sheet-close {
+  width:32px; height:32px; border-radius:50%;
+  background:var(--surface2); border:none; display:flex;
+  align-items:center; justify-content:center; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; color:var(--text-2);
+  font-size:18px; -webkit-appearance:none; appearance:none;
+}
+.sheet-body { padding:0 20px; }
+
+/* Form inside sheet */
+.form-field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+.form-label { font-size:12px; color:var(--text-3); letter-spacing:.04em; }
+.form-input {
+  height:48px; border:1px solid var(--border); border-radius:var(--r);
+  background:var(--bg); color:var(--text); font-family:inherit; font-size:16px;
+  padding:0 12px; outline:none; width:100%;
+  -webkit-appearance:none; appearance:none;
+}
+.form-input:focus { border-color:var(--accent-m); }
+.form-select {
+  height:48px; border:1px solid var(--border); border-radius:var(--r);
+  background:var(--bg); color:var(--text); font-family:inherit; font-size:16px;
+  padding:0 36px 0 12px; outline:none; width:100%;
+  -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239C9488' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center;
+}
+.form-row { display:flex; gap:10px; }
+.form-row .form-field { flex:1; }
+.time-add-row { display:flex; gap:8px; align-items:center; }
+.time-input {
+  flex:1; height:48px; border:1px solid var(--border); border-radius:var(--r);
+  background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; font-size:16px;
+  padding:0 12px; outline:none;
+  -webkit-appearance:none; appearance:none;
+}
+.time-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.time-tag {
+  display:flex; align-items:center; gap:5px;
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:100px; padding:5px 10px;
+  font-size:14px; font-family:'DM Mono',monospace;
+}
+.time-tag .rm {
+  font-size:18px; color:var(--text-3); cursor:pointer; padding:0 2px;
+  -webkit-tap-highlight-color:transparent; line-height:1;
+}
+.form-hint { font-size:12px; color:var(--text-3); margin-top:4px; }
+
+/* Confirm sheet */
+.confirm-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 0; border-bottom:1px solid var(--border);
+}
+.confirm-row:last-child { border-bottom:none; }
+.confirm-key { font-size:13px; color:var(--text-3); }
+.confirm-val { font-size:14px; font-weight:500; text-align:right; }
+
+/* Alert modal (centered) */
+.alert-modal-overlay {
+  position:fixed; inset:0; background:rgba(20,18,14,.52);
+  z-index:300; display:flex; align-items:center; justify-content:center;
+  padding:20px; opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.alert-modal-overlay.show { opacity:1; pointer-events:all; }
+.alert-modal {
+  background:var(--surface); border-radius:var(--rxl);
+  padding:28px 24px; max-width:400px; width:100%;
+  border:1px solid var(--border); transform:scale(.96); transition:transform .2s;
+}
+.alert-modal-overlay.show .alert-modal { transform:scale(1); }
+.alert-icon-circle {
+  width:52px; height:52px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; font-size:24px; margin-bottom:14px;
+}
+.alert-title { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:6px; }
+.alert-body { font-size:14px; color:var(--text-2); line-height:1.7; margin-bottom:18px; }
+.alert-items { display:flex; flex-direction:column; gap:7px; margin-bottom:18px; }
+.alert-item {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:10px 12px; border-radius:var(--r);
+}
+.alert-item.danger { background:var(--danger-l); border:1px solid #F0AAAA; }
+.alert-item.warn { background:var(--warn-l); border:1px solid #EFC97A; }
+.alert-item-info { flex:1; min-width:0; }
+.alert-item-name { font-size:14px; font-weight:500; }
+.alert-item-detail { font-size:12px; color:var(--text-2); word-break:break-all; }
+.alert-item-days { font-family:'DM Mono',monospace; font-size:13px; font-weight:500; flex-shrink:0; white-space:nowrap; }
+
+/* System banners */
+.sys-banner {
+  padding:10px 1rem; display:none; align-items:flex-start;
+  gap:8px; font-size:13px; flex-wrap:wrap;
+}
+.sys-banner.show { display:flex; }
+.sys-banner.danger-b { background:var(--danger-l); border-bottom:1px solid #F0AAAA; color:var(--danger); }
+.sys-banner.warn-b { background:var(--warn-l); border-bottom:1px solid #EFC97A; color:var(--warn); }
+.banner-chip {
+  border-radius:100px; padding:2px 8px; font-size:12px;
+  font-weight:500; white-space:nowrap;
+}
+.danger-b .banner-chip { background:#F0AAAA; color:var(--danger); }
+.warn-b .banner-chip { background:#EFC97A; color:var(--warn); }
+
+/* Shared */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  height:48px; padding:0 20px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--text); font-family:inherit; font-size:15px; font-weight:500;
+  cursor:pointer; white-space:nowrap;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  -webkit-appearance:none; appearance:none;
+}
+.btn:active { opacity:.7; }
+.btn-primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn-danger { color:var(--danger-m); border-color:transparent; background:transparent; }
+.btn-sm { height:36px; padding:0 14px; font-size:13px; }
+.btn-full { width:100%; }
+.btn-row { display:flex; gap:8px; margin-top:16px; padding:0 20px; }
+.empty-state { text-align:center; padding:40px 20px; color:var(--text-3); font-size:14px; }
+.empty-icon { font-size:32px; margin-bottom:10px; opacity:.4; }
+.divider { border:none; border-top:1px solid var(--border); margin:14px 0; }
+@media(max-width:480px){ .logo-sub{display:none;} }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<header class="top-bar">
+  <div>
+    <span class="logo-mark">MediCal</span>
+    <span class="logo-sub">用藥管理</span>
+  </div>
+  <div class="top-actions">
+    <div class="save-dot-wrap">
+      <div class="save-dot" id="save-dot"></div>
+      <span id="save-label">已儲存</span>
+    </div>
+    <button class="btn btn-sm" onclick="showPage('stock')" style="background:var(--bg)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      更新庫存
+    </button>
+  </div>
+</header>
+
+<!-- System banners -->
+<div class="sys-banner danger-b" id="danger-banner">
+  <span style="flex-shrink:0;padding-top:1px">⚠</span>
+  <strong style="white-space:nowrap">庫存不足：</strong>
+  <div id="danger-chips" style="display:flex;flex-wrap:wrap;gap:5px;flex:1"></div>
+</div>
+<div class="sys-banner warn-b" id="warn-banner">
+  <span style="flex-shrink:0;padding-top:1px">⏳</span>
+  <strong style="white-space:nowrap">即將用完：</strong>
+  <div id="warn-chips" style="display:flex;flex-wrap:wrap;gap:5px;flex:1"></div>
+</div>
+
+<!-- Pages -->
+<div class="page active" id="page-home">
+  <div class="dash-greeting">
+    <div class="dash-date" id="dash-date"></div>
+    <div class="dash-title">今日用藥總覽</div>
+  </div>
+
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <div class="section-head">
+    <span class="section-title">今日時程</span>
+  </div>
+  <div id="home-schedule"></div>
+
+  <div class="section-head" style="margin-top:8px">
+    <span class="section-title">庫存狀態</span>
+    <button class="link-btn" onclick="showPage('stock')">管理庫存 →</button>
+  </div>
+  <div class="inv-grid" id="home-inv"></div>
+</div>
+
+<div class="page" id="page-meds">
+  <div class="page-title">我的藥物</div>
+  <div class="page-sub">管理所有已設定的藥物資料</div>
+  <div id="med-list"></div>
+  <div class="empty-state" id="med-empty" style="display:none">
+    <div class="empty-icon">💊</div>
+    <div>尚未新增任何藥物</div>
+    <div style="font-size:12px;color:var(--text-3);margin-top:4px">點下方 + 按鈕新增</div>
+  </div>
+</div>
+
+<div class="page" id="page-stock">
+  <div class="page-title">庫存管理</div>
+  <div class="page-sub">批次更新各藥物的目前庫存量</div>
+
+  <div class="stock-batch-card" id="stock-list">
+    <div class="empty-state" style="padding:24px">
+      <div class="empty-icon">📦</div>新增藥物後即可管理庫存
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-full" onclick="saveStockBatch()" style="margin-bottom:14px">
+    ✓ 儲存所有庫存
+  </button>
+
+  <div class="section-head" style="margin-top:8px">
+    <span class="section-title">匯出行事曆</span>
+  </div>
+  <div class="ics-card">
+    <div class="ics-desc">將用藥時程匯出為 .ics 檔案，可匯入 Google 行事曆、Apple 行事曆或 Outlook，並自動建立 5 分鐘前提醒。</div>
+    <button class="ics-btn" onclick="exportICS()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+      下載 .ics 行事曆檔案
+    </button>
+  </div>
+</div>
+
+<!-- ── Bottom Nav ── -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="showPage('home')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    首頁
+  </button>
+  <button class="nav-add" onclick="openAddSheet()">
+    <div class="nav-add-circle">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </button>
+  <button class="nav-item" id="nav-meds" onclick="showPage('meds')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/></svg>
+    藥物
+  </button>
+</nav>
+
+<!-- ── ADD MED SHEET ── -->
+<div class="overlay" id="add-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">新增藥物</div>
+      <button class="sheet-close" onclick="closeAddSheet()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-field">
+        <label class="form-label">藥物名稱 *</label>
+        <input class="form-input" id="f-name" type="text" placeholder="例：降血壓藥" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">每次劑量 *</label>
+          <input class="form-input" id="f-dose" type="number" min="0.5" step="0.5" placeholder="1" inputmode="decimal">
+        </div>
+        <div class="form-field">
+          <label class="form-label">單位</label>
+          <select class="form-select" id="f-unit">
+            <option value="顆">顆</option>
+            <option value="mg">mg</option>
+            <option value="ml">ml</option>
+            <option value="片">片</option>
+            <option value="滴">滴</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">服用週期</label>
+          <select class="form-select" id="f-repeat">
+            <option value="daily">每天</option>
+            <option value="weekdays">週一～五</option>
+            <option value="weekly">每週</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">開始日期</label>
+          <input class="form-input" id="f-date" type="date">
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">庫存警告閾值（天）</label>
+        <input class="form-input" id="f-alert" type="number" min="1" step="1" placeholder="7" inputmode="numeric">
+      </div>
+      <div class="form-field">
+        <label class="form-label">初始庫存數量（選填）</label>
+        <input class="form-input" id="f-stock" type="number" min="0" step="1" placeholder="例：30" inputmode="numeric">
+        <div class="form-hint">首次設定時可填入，後續在「庫存管理」頁批次更新</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">服用時間 *</label>
+        <div class="time-add-row">
+          <input class="time-input" id="f-time" type="time">
+          <button class="btn btn-sm" onclick="addFormTime()">+ 加入</button>
+        </div>
+        <div class="time-tags" id="f-time-tags"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-full" onclick="closeAddSheet()">取消</button>
+      <button class="btn btn-primary btn-full" onclick="goConfirm()">下一步 確認 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM SHEET ── -->
+<div class="overlay" id="confirm-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">確認資料</div>
+      <button class="sheet-close" onclick="closeConfirm()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div style="font-size:13px;color:var(--text-3);margin-bottom:14px">請確認以下資料無誤後，點「確定新增」完成設定。</div>
+      <div id="confirm-rows"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-full" onclick="closeConfirm()">返回修改</button>
+      <button class="btn btn-primary btn-full" onclick="confirmAdd()">✓ 確定新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── EDIT SHEET ── -->
+<div class="overlay" id="edit-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">編輯藥物</div>
+      <button class="sheet-close" onclick="closeEditSheet()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-field">
+        <label class="form-label">藥物名稱</label>
+        <input class="form-input" id="e-name" type="text" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">每次劑量</label>
+          <input class="form-input" id="e-dose" type="number" min="0.5" step="0.5" inputmode="decimal">
+        </div>
+        <div class="form-field">
+          <label class="form-label">單位</label>
+          <select class="form-select" id="e-unit">
+            <option value="顆">顆</option>
+            <option value="mg">mg</option>
+            <option value="ml">ml</option>
+            <option value="片">片</option>
+            <option value="滴">滴</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">服用週期</label>
+          <select class="form-select" id="e-repeat">
+            <option value="daily">每天</option>
+            <option value="weekdays">週一～五</option>
+            <option value="weekly">每週</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">警告閾值（天）</label>
+          <input class="form-input" id="e-alert" type="number" min="1" inputmode="numeric">
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">服用時間</label>
+        <div class="time-add-row">
+          <input class="time-input" id="e-time" type="time">
+          <button class="btn btn-sm" onclick="addEditTime()">+ 加入</button>
+        </div>
+        <div class="time-tags" id="e-time-tags"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-full" onclick="closeEditSheet()">取消</button>
+      <button class="btn btn-primary btn-full" onclick="saveEdit()">儲存變更</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ALERT MODAL ── -->
+<div class="alert-modal-overlay" id="alert-modal-overlay">
+  <div class="alert-modal">
+    <div class="alert-icon-circle" id="am-icon-wrap">⚠</div>
+    <div class="alert-title" id="am-title">庫存警示</div>
+    <div class="alert-body" id="am-body"></div>
+    <div class="alert-items" id="am-items"></div>
+    <button class="btn btn-primary btn-full" onclick="closeAlertModal()">確認</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════
+   DATA
+══════════════════════════════════ */
+const COLORS = ['#2D8A4E','#2872C4','#C0530D','#8B3A8B','#B8860B','#C0395A','#1A7A7A','#6B3A2A'];
+const STORAGE_KEY = 'medical_v2';
+let meds = [];
+let medId = 0;
+let saveTimer = null;
+let editingId = null;
+let editTimes = [];
+let formTimes = [];
+
+function today(){ return new Date().toISOString().split('T')[0]; }
+
+/* ══════════════════════════════════
+   STORAGE
+══════════════════════════════════ */
+function saveData(){
+  const dot = document.getElementById('save-dot');
+  const lbl = document.getElementById('save-label');
+  if(dot) dot.classList.add('saving');
+  if(lbl) lbl.textContent = '儲存中…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({meds,medId}));
+      if(dot) dot.classList.remove('saving');
+      if(lbl) lbl.textContent = '已儲存 ' + new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    }catch(e){ if(lbl) lbl.textContent = '儲存失敗'; }
+  }, 600);
+}
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const p = JSON.parse(raw);
+    if(p && Array.isArray(p.meds) && p.meds.length){
+      meds = p.meds; medId = p.medId || meds.reduce((mx,m)=>Math.max(mx,m.id),0);
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+/* ══════════════════════════════════
+   CALCULATIONS
+══════════════════════════════════ */
+function dailyDose(m){ return m.times.length * Number(m.dose||0); }
+function daysLeft(m){
+  const dd = dailyDose(m);
+  if(!dd || m.stock==='' || m.stock===null || m.stock===undefined) return null;
+  return Math.floor(Number(m.stock)/dd);
+}
+function stockStatus(m){
+  const d = daysLeft(m);
+  if(d===null) return 'none';
+  if(d<=0) return 'danger';
+  if(d<=Number(m.alertDays||7)) return 'warn';
+  return 'ok';
+}
+
+/* ══════════════════════════════════
+   PAGE NAVIGATION
+══════════════════════════════════ */
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg = document.getElementById('page-'+id);
+  const nav = document.getElementById('nav-'+id);
+  if(pg) pg.classList.add('active');
+  if(nav) nav.classList.add('active');
+  if(id==='home') renderHome();
+  if(id==='meds') renderMeds();
+  if(id==='stock') renderStock();
+}
+
+/* ══════════════════════════════════
+   HOME / DASHBOARD
+══════════════════════════════════ */
+function renderHome(){
+  const now = new Date();
+  const dateEl = document.getElementById('dash-date');
+  if(dateEl) dateEl.textContent = now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+  const valid = meds.filter(m=>m.name&&m.times.length);
+  const withStock = valid.filter(m=>m.stock!==''&&m.stock!==null&&m.stock!==undefined);
+  const dangerN = withStock.filter(m=>stockStatus(m)==='danger').length;
+  const warnN = withStock.filter(m=>stockStatus(m)==='warn').length;
+  const totalDoses = valid.reduce((s,m)=>s+m.times.length,0);
+
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card ${dangerN>0?'danger':warnN>0?'warn':''}">
+      <div class="stat-n" style="color:${dangerN>0?'var(--danger-m)':warnN>0?'var(--warn-m)':'var(--text)'}">${dangerN+warnN}</div>
+      <div class="stat-label">庫存警示</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n">${valid.length}</div>
+      <div class="stat-label">藥物種類</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n">${totalDoses}</div>
+      <div class="stat-label">今日劑次</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n">${withStock.filter(m=>stockStatus(m)==='ok').length}</div>
+      <div class="stat-label" style="color:var(--accent-m)">庫存充足</div>
+    </div>`;
+
+  // Schedule
+  const slots=[];
+  valid.forEach(m=>m.times.forEach(t=>slots.push({t,m})));
+  slots.sort((a,b)=>a.t.localeCompare(b.t));
+  const grouped={};
+  slots.forEach(({t,m})=>{if(!grouped[t])grouped[t]=[];grouped[t].push(m);});
+  const schEl = document.getElementById('home-schedule');
+  if(!slots.length){
+    schEl.innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-icon">📋</div>尚未設定用藥時程</div>';
+  } else {
+    schEl.innerHTML='<div class="schedule-card">'+
+      Object.entries(grouped).map(([t,ms])=>`
+        <div class="schedule-slot">
+          <div class="slot-time">${t}</div>
+          <div class="slot-pills">${ms.map(m=>`
+            <div class="slot-pill-row">
+              <div class="slot-dot" style="background:${m.color}"></div>
+              <span>${m.name} ${m.dose}${m.unit}</span>
+            </div>`).join('')}
+          </div>
+        </div>`).join('')+
+      '</div>';
+  }
+
+  // Inventory dashboard
+  const invEl = document.getElementById('home-inv');
+  if(!withStock.length){
+    invEl.innerHTML='<div class="empty-state" style="padding:16px;text-align:center;color:var(--text-3);font-size:13px">設定庫存後顯示狀態</div>';
+    return;
+  }
+  const sorted = [...withStock].sort((a,b)=>{
+    const ord={danger:0,warn:1,ok:2,none:3};
+    return (ord[stockStatus(a)]??3)-(ord[stockStatus(b)]??3);
+  });
+  invEl.innerHTML = sorted.map(m=>{
+    const dl=daysLeft(m), ss=stockStatus(m);
+    const pct = dl!==null ? Math.min(100,Math.round(dl/Math.max(Number(m.alertDays||7)*4,30)*100)) : 0;
+    const dcolor = ss==='danger'?'var(--danger-m)':ss==='warn'?'var(--warn-m)':'var(--accent-m)';
+    return `<div class="inv-dash-card ${ss}">
+      <div class="inv-color" style="background:${m.color}"></div>
+      <div class="inv-info">
+        <div class="inv-name">${m.name}</div>
+        <div class="inv-detail">每日 ${dailyDose(m)} ${m.unit}　庫存 ${m.stock} ${m.unit}</div>
+        <div class="inv-bar-wrap">
+          <div class="inv-bar-track"><div class="inv-bar-fill ${ss}" style="width:${pct}%"></div></div>
+        </div>
+      </div>
+      <div class="inv-days" style="color:${dcolor}">${ss==='danger'?'不足':dl+'天'}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════
+   MEDS PAGE
+══════════════════════════════════ */
+function renderMeds(){
+  const el = document.getElementById('med-list');
+  const em = document.getElementById('med-empty');
+  if(!meds.length){ el.innerHTML=''; em.style.display='block'; return; }
+  em.style.display='none';
+  el.innerHTML = meds.map(m=>`
+    <div class="med-card">
+      <div class="med-card-color" style="background:${m.color}"></div>
+      <div class="med-card-info">
+        <div class="med-card-name">${m.name||'（未命名）'}</div>
+        <div class="med-card-sub">${m.dose}${m.unit}／次　${m.times.length?m.times.join('、'):'未設定時間'}　${m.repeat==='daily'?'每天':m.repeat==='weekdays'?'週一～五':'每週'}</div>
+      </div>
+      <div class="med-card-actions">
+        <button class="icon-btn" onclick="openEdit(${m.id})" title="編輯">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+        </button>
+        <button class="icon-btn danger" onclick="deleteMed(${m.id})" title="刪除">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+function deleteMed(id){
+  if(!confirm('確定要刪除這個藥物嗎？')) return;
+  meds = meds.filter(m=>m.id!==id);
+  render(); renderMeds();
+}
+
+/* ══════════════════════════════════
+   STOCK PAGE
+══════════════════════════════════ */
+let stockInputs = {};
+
+function renderStock(){
+  stockInputs = {};
+  const el = document.getElementById('stock-list');
+  if(!meds.length){
+    el.innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-icon">📦</div>新增藥物後即可管理庫存</div>';
+    return;
+  }
+  el.innerHTML = meds.map(m=>{
+    const ss = stockStatus(m);
+    const chipCls = ss==='none'?'none':ss;
+    const chipTxt = ss==='danger'?'不足':ss==='warn'?`剩${daysLeft(m)}天`:ss==='ok'?`剩${daysLeft(m)}天`:'未設定';
+    return `<div class="stock-batch-row">
+      <div class="med-card-color" style="background:${m.color};flex-shrink:0"></div>
+      <div class="stock-batch-info">
+        <div class="stock-batch-name">${m.name}</div>
+        <div class="stock-batch-meta">${m.dose}${m.unit}／次　每日 ${dailyDose(m)||'—'} ${m.unit}　警告 ${m.alertDays||7} 天</div>
+      </div>
+      <div class="stock-batch-right">
+        <input class="stock-num-input" type="number" min="0" step="1"
+          id="si-${m.id}" inputmode="numeric"
+          value="${m.stock!==undefined&&m.stock!==''?m.stock:''}"
+          placeholder="數量">
+        <span class="stock-status-chip ${chipCls}">${chipTxt}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveStockBatch(){
+  meds.forEach(m=>{
+    const inp = document.getElementById('si-'+m.id);
+    if(inp && inp.value!=='') m.stock = inp.value;
+  });
+  saveData();
+  renderStock();
+  render();
+  // quick feedback
+  const btn = event.currentTarget||event.target;
+  const orig = btn.textContent; btn.textContent='✓ 已儲存！';
+  setTimeout(()=>btn.textContent=orig, 1500);
+}
+
+/* ══════════════════════════════════
+   ADD MED SHEET
+══════════════════════════════════ */
+function openAddSheet(){
+  formTimes=[];
+  document.getElementById('f-name').value='';
+  document.getElementById('f-dose').value='';
+  document.getElementById('f-unit').value='顆';
+  document.getElementById('f-repeat').value='daily';
+  document.getElementById('f-date').value=today();
+  document.getElementById('f-alert').value='7';
+  document.getElementById('f-stock').value='';
+  document.getElementById('f-time').value='';
+  document.getElementById('f-time-tags').innerHTML='';
+  document.getElementById('add-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('f-name').focus(),300);
+}
+function closeAddSheet(){ document.getElementById('add-overlay').classList.remove('show'); }
+
+function addFormTime(){
+  const inp = document.getElementById('f-time');
+  if(!inp.value) return;
+  if(!formTimes.includes(inp.value)){ formTimes.push(inp.value); formTimes.sort(); }
+  inp.value='';
+  renderFormTimes();
+}
+function removeFormTime(t){ formTimes=formTimes.filter(x=>x!==t); renderFormTimes(); }
+function renderFormTimes(){
+  document.getElementById('f-time-tags').innerHTML = formTimes.map(t=>`
+    <div class="time-tag">
+      <span>${t}</span>
+      <span class="rm" onclick="removeFormTime('${t}')">&times;</span>
+    </div>`).join('') || '<span style="font-size:13px;color:var(--text-3);font-style:italic">尚未加入時間</span>';
+}
+
+function goConfirm(){
+  const name = document.getElementById('f-name').value.trim();
+  const dose = document.getElementById('f-dose').value;
+  if(!name){ alert('請填寫藥物名稱'); return; }
+  if(!dose||Number(dose)<=0){ alert('請填寫每次劑量'); return; }
+  if(!formTimes.length){ alert('請至少加入一個服用時間'); return; }
+
+  const unit  = document.getElementById('f-unit').value;
+  const rep   = document.getElementById('f-repeat').value;
+  const date  = document.getElementById('f-date').value||today();
+  const alert_= document.getElementById('f-alert').value||'7';
+  const stock = document.getElementById('f-stock').value;
+  const repTxt= rep==='daily'?'每天':rep==='weekdays'?'週一～五':'每週';
+
+  document.getElementById('confirm-rows').innerHTML = `
+    <div class="confirm-row"><span class="confirm-key">藥物名稱</span><span class="confirm-val">${name}</span></div>
+    <div class="confirm-row"><span class="confirm-key">每次劑量</span><span class="confirm-val">${dose} ${unit}</span></div>
+    <div class="confirm-row"><span class="confirm-key">服用時間</span><span class="confirm-val">${formTimes.join('、')}</span></div>
+    <div class="confirm-row"><span class="confirm-key">服用週期</span><span class="confirm-val">${repTxt}</span></div>
+    <div class="confirm-row"><span class="confirm-key">開始日期</span><span class="confirm-val">${date}</span></div>
+    <div class="confirm-row"><span class="confirm-key">庫存警告閾值</span><span class="confirm-val">${alert_} 天</span></div>
+    <div class="confirm-row"><span class="confirm-key">初始庫存</span><span class="confirm-val">${stock?stock+' '+unit:'（未設定）'}</span></div>
+    <div class="confirm-row"><span class="confirm-key">每日消耗</span><span class="confirm-val">${formTimes.length * Number(dose)} ${unit}</span></div>`;
+
+  document.getElementById('add-overlay').classList.remove('show');
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+
+function closeConfirm(){
+  document.getElementById('confirm-overlay').classList.remove('show');
+  document.getElementById('add-overlay').classList.add('show');
+}
+
+function confirmAdd(){
+  const id = ++medId;
+  const stock = document.getElementById('f-stock').value;
+  meds.push({
+    id,
+    name:  document.getElementById('f-name').value.trim(),
+    dose:  document.getElementById('f-dose').value,
+    unit:  document.getElementById('f-unit').value,
+    times: [...formTimes],
+    repeat:document.getElementById('f-repeat').value,
+    startDate: document.getElementById('f-date').value||today(),
+    alertDays: document.getElementById('f-alert').value||'7',
+    stock: stock!==''?stock:'',
+    color: COLORS[(id-1)%COLORS.length]
+  });
+  document.getElementById('confirm-overlay').classList.remove('show');
+  formTimes=[];
+  render();
+  showPage('meds');
+}
+
+/* ══════════════════════════════════
+   EDIT SHEET
+══════════════════════════════════ */
+function openEdit(id){
+  const m = meds.find(m=>m.id===id);
+  if(!m) return;
+  editingId = id;
+  editTimes = [...m.times];
+  document.getElementById('e-name').value = m.name;
+  document.getElementById('e-dose').value = m.dose;
+  document.getElementById('e-unit').value = m.unit;
+  document.getElementById('e-repeat').value = m.repeat;
+  document.getElementById('e-alert').value = m.alertDays||7;
+  document.getElementById('e-time').value = '';
+  renderEditTimes();
+  document.getElementById('edit-overlay').classList.add('show');
+}
+function closeEditSheet(){ document.getElementById('edit-overlay').classList.remove('show'); editingId=null; }
+
+function addEditTime(){
+  const inp = document.getElementById('e-time');
+  if(!inp.value) return;
+  if(!editTimes.includes(inp.value)){ editTimes.push(inp.value); editTimes.sort(); }
+  inp.value='';
+  renderEditTimes();
+}
+function removeEditTime(t){ editTimes=editTimes.filter(x=>x!==t); renderEditTimes(); }
+function renderEditTimes(){
+  document.getElementById('e-time-tags').innerHTML = editTimes.map(t=>`
+    <div class="time-tag">
+      <span>${t}</span>
+      <span class="rm" onclick="removeEditTime('${t}')">&times;</span>
+    </div>`).join('') || '<span style="font-size:13px;color:var(--text-3);font-style:italic">尚未設定時間</span>';
+}
+function saveEdit(){
+  const m = meds.find(m=>m.id===editingId);
+  if(!m) return;
+  m.name = document.getElementById('e-name').value.trim()||m.name;
+  m.dose = document.getElementById('e-dose').value||m.dose;
+  m.unit = document.getElementById('e-unit').value;
+  m.repeat = document.getElementById('e-repeat').value;
+  m.alertDays = document.getElementById('e-alert').value||7;
+  m.times = [...editTimes];
+  closeEditSheet();
+  render(); renderMeds();
+}
+
+/* ══════════════════════════════════
+   ALERT SYSTEM
+══════════════════════════════════ */
+function checkAlerts(){
+  const valid = meds.filter(m=>m.name&&m.times.length&&m.stock!==''&&m.stock!==undefined);
+  const dangers = valid.filter(m=>stockStatus(m)==='danger');
+  const warns   = valid.filter(m=>stockStatus(m)==='warn');
+  const db=document.getElementById('danger-banner');
+  const wb=document.getElementById('warn-banner');
+  if(dangers.length){
+    db.classList.add('show');
+    document.getElementById('danger-chips').innerHTML=dangers.map(m=>`<span class="banner-chip">${m.name}</span>`).join('');
+  } else db.classList.remove('show');
+  if(warns.length){
+    wb.classList.add('show');
+    document.getElementById('warn-chips').innerHTML=warns.map(m=>`<span class="banner-chip">${m.name} 剩${daysLeft(m)}天</span>`).join('');
+  } else wb.classList.remove('show');
+}
+
+function openAlertModal(){
+  const valid = meds.filter(m=>m.name&&m.times.length&&m.stock!==''&&m.stock!==undefined);
+  const dangers = valid.filter(m=>stockStatus(m)==='danger');
+  const warns   = valid.filter(m=>stockStatus(m)==='warn');
+  const all = [...dangers.map(m=>({m,type:'danger'})),...warns.map(m=>({m,type:'warn'}))];
+  if(!all.length){
+    document.getElementById('am-icon-wrap').textContent='✓';
+    document.getElementById('am-icon-wrap').style.background='var(--accent-l)';
+    document.getElementById('am-title').textContent='庫存狀態良好';
+    document.getElementById('am-title').style.color='var(--accent)';
+    document.getElementById('am-body').textContent='所有設定庫存的藥物均在安全範圍內。';
+    document.getElementById('am-items').innerHTML='';
+  } else {
+    document.getElementById('am-icon-wrap').textContent='⚠';
+    document.getElementById('am-icon-wrap').style.background='var(--danger-l)';
+    document.getElementById('am-title').textContent='庫存警示';
+    document.getElementById('am-title').style.color='var(--danger)';
+    document.getElementById('am-body').textContent=`以下 ${all.length} 種藥物需要補充：`;
+    document.getElementById('am-items').innerHTML=all.map(({m,type})=>`
+      <div class="alert-item ${type}">
+        <div style="width:9px;height:9px;border-radius:50%;background:${m.color};flex-shrink:0;margin-top:3px"></div>
+        <div class="alert-item-info">
+          <div class="alert-item-name">${m.name}</div>
+          <div class="alert-item-detail">庫存 ${m.stock}${m.unit}　每日 ${dailyDose(m)}${m.unit}</div>
+        </div>
+        <div class="alert-item-days" style="color:${type==='danger'?'var(--danger-m)':'var(--warn-m)'}">${type==='danger'?'已不足':'剩'+daysLeft(m)+'天'}</div>
+      </div>`).join('');
+  }
+  document.getElementById('alert-modal-overlay').classList.add('show');
+}
+function closeAlertModal(){ document.getElementById('alert-modal-overlay').classList.remove('show'); }
+document.getElementById('alert-modal-overlay').addEventListener('click',function(e){if(e.target===this)closeAlertModal();});
+
+/* ══════════════════════════════════
+   OVERLAY CLOSE ON BACKDROP
+══════════════════════════════════ */
+['add-overlay','confirm-overlay','edit-overlay'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',function(e){
+    if(e.target===this){
+      if(id==='confirm-overlay') closeConfirm();
+      else this.classList.remove('show');
+    }
+  });
+});
+
+/* ══════════════════════════════════
+   ICS EXPORT
+══════════════════════════════════ */
+function fmtICS(d,t){const[y,mo,dd]=d.split('-'),[h,mn]=t.split(':');return`${y}${mo}${dd}T${h}${mn}00`;}
+function rrule(r){return r==='daily'?'RRULE:FREQ=DAILY':r==='weekdays'?'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR':'RRULE:FREQ=WEEKLY';}
+function exportICS(){
+  const valid=meds.filter(m=>m.name&&m.times.length);
+  if(!valid.length){alert('請先設定至少一種藥物與服用時間');return;}
+  let uid=Date.now(),events=[];
+  valid.forEach(m=>{
+    m.times.forEach(t=>{
+      const[h,mn]=t.split(':');
+      const eh=parseInt(h)+(parseInt(mn)+15>=60?1:0);
+      const em=(parseInt(mn)+15)%60;
+      const tend=`${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`;
+      events.push(['BEGIN:VEVENT',`UID:med-${++uid}@medical`,
+        `DTSTART:${fmtICS(m.startDate||today(),t)}`,`DTEND:${fmtICS(m.startDate||today(),tend)}`,
+        `SUMMARY:💊 ${m.name} ${m.dose}${m.unit}`,`DESCRIPTION:服用 ${m.name}，劑量：${m.dose}${m.unit}`,
+        rrule(m.repeat),'BEGIN:VALARM','TRIGGER:-PT5M','ACTION:DISPLAY',
+        `DESCRIPTION:提醒：${m.name}`,
+        'END:VALARM','END:VEVENT'].join('\r\n'));
+    });
+  });
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//MediCal//ZH','CALSCALE:GREGORIAN','METHOD:PUBLISH',...events,'END:VCALENDAR'].join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar;charset=utf-8'}));
+  a.download='用藥時程.ics'; a.click();
+}
+
+/* ══════════════════════════════════
+   AUTO-DEDUCT ENGINE
+   Key format: `log_{medId}_{HH:MM}_{YYYY-MM-DD}`
+   Value: 'done' — marks that this slot on this date has been deducted
+══════════════════════════════════ */
+const LOG_KEY = 'medical_doselog_v1';
+
+function loadLog(){
+  try{ return JSON.parse(localStorage.getItem(LOG_KEY)||'{}'); }catch(e){ return {}; }
+}
+function saveLog(log){ localStorage.setItem(LOG_KEY, JSON.stringify(log)); }
+
+// Returns "HH:MM" string for current local time
+function nowHHMM(){
+  const n=new Date();
+  return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+}
+// Returns "YYYY-MM-DD" string for current local date
+function todayLocal(){
+  const n=new Date();
+  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+}
+
+/* Should this med be active on a given YYYY-MM-DD? */
+function isActiveDay(m, dateStr){
+  if(m.repeat==='daily') return true;
+  const d = new Date(dateStr+'T12:00:00'); // noon avoids DST edge
+  const dow = d.getDay(); // 0=Sun
+  if(m.repeat==='weekdays') return dow>=1&&dow<=5;
+  if(m.repeat==='weekly'){
+    const start = new Date((m.startDate||todayLocal())+'T12:00:00');
+    const diff = Math.round((d-start)/(86400000));
+    return diff>=0 && diff%7===0;
+  }
+  return true;
+}
+
+/*
+  runAutoDeduct():
+  - Scans all meds × times for today (and yesterday if we just crossed midnight)
+  - Deducts stock for every slot whose time has already passed and hasn't been logged yet
+  - Shows a toast with what was deducted
+*/
+function runAutoDeduct(){
+  const log = loadLog();
+  const now = new Date();
+  const currentHHMM = nowHHMM();
+  const currentDate = todayLocal();
+
+  // Also handle yesterday's slots that might have been missed if the app
+  // was closed all night (we back-fill up to 24h ago)
+  const yesterday = new Date(now - 86400000);
+  const ydStr = yesterday.getFullYear()+'-'+String(yesterday.getMonth()+1).padStart(2,'0')+'-'+String(yesterday.getDate()).padStart(2,'0');
+
+  const deducted = []; // { name, time, amount, unit }
+
+  meds.forEach(m=>{
+    if(!m.name || !m.times.length) return;
+    if(m.stock===''||m.stock===null||m.stock===undefined) return; // no stock set
+
+    m.times.forEach(slotTime=>{
+      // ── Today's slot ──
+      if(isActiveDay(m, currentDate)){
+        const key = `log_${m.id}_${slotTime}_${currentDate}`;
+        const slotPassed = slotTime <= currentHHMM;
+        if(slotPassed && !log[key]){
+          const amt = Number(m.dose||0);
+          const before = Number(m.stock);
+          const after = Math.max(0, before - amt);
+          m.stock = String(after);
+          log[key] = 'done';
+          deducted.push({ name: m.name, time: slotTime, amount: amt, unit: m.unit, date: currentDate });
+        }
+      }
+
+      // ── Yesterday's missed slots (back-fill) ──
+      if(isActiveDay(m, ydStr)){
+        const keyYd = `log_${m.id}_${slotTime}_${ydStr}`;
+        if(!log[keyYd]){
+          const amt = Number(m.dose||0);
+          const before = Number(m.stock);
+          const after = Math.max(0, before - amt);
+          m.stock = String(after);
+          log[keyYd] = 'done';
+          // Don't add to today's toast — silent catch-up
+        }
+      }
+    });
+  });
+
+  saveLog(log);
+
+  if(deducted.length){
+    saveData();
+    showDeductToast(deducted);
+    checkAlerts();
+    render();
+  }
+}
+
+/* ── Toast notification ── */
+function showDeductToast(items){
+  let toast = document.getElementById('deduct-toast');
+  if(!toast){
+    toast = document.createElement('div');
+    toast.id = 'deduct-toast';
+    toast.style.cssText = [
+      'position:fixed','bottom:calc(var(--nav-h) + var(--safe-b) + 12px)','left:50%',
+      'transform:translateX(-50%)','z-index:500',
+      'background:#1A1814','color:#fff',
+      'border-radius:14px','padding:10px 18px',
+      'font-size:13px','line-height:1.5',
+      'max-width:calc(100vw - 2rem)','width:max-content',
+      'box-shadow:0 4px 20px rgba(0,0,0,.35)',
+      'pointer-events:none','text-align:center',
+      'transition:opacity .4s'
+    ].join(';');
+    document.body.appendChild(toast);
+  }
+  const lines = items.map(i=>`💊 ${i.name}（${i.time}）已扣 ${i.amount}${i.unit}`);
+  toast.innerHTML = lines.join('<br>');
+  toast.style.opacity='1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(()=>{ toast.style.opacity='0'; }, 4000);
+}
+
+/* ── Mark today's schedule slots as taken/pending in the UI ── */
+function getSlotStatus(medId, slotTime, dateStr){
+  const log = loadLog();
+  const key = `log_${medId}_${slotTime}_${dateStr}`;
+  return log[key]==='done' ? 'taken' : (slotTime <= nowHHMM() ? 'past' : 'upcoming');
+}
+
+/* ══════════════════════════════════
+   MAIN RENDER
+══════════════════════════════════ */
+function render(){
+  checkAlerts();
+  saveData();
+  const ap = document.querySelector('.page.active');
+  if(ap){
+    if(ap.id==='page-home') renderHome();
+    if(ap.id==='page-meds') renderMeds();
+    if(ap.id==='page-stock') renderStock();
+  }
+}
+
+/* ══════════════════════════════════
+   PATCH renderHome to show slot status
+══════════════════════════════════ */
+const _origRenderHome = renderHome;
+renderHome = function(){
+  _origRenderHome();
+  // Annotate schedule slots with taken/upcoming status
+  const dateStr = todayLocal();
+  const schEl = document.getElementById('home-schedule');
+  if(!schEl) return;
+
+  // Re-render schedule with status badges
+  const valid = meds.filter(m=>m.name&&m.times.length);
+  const slots=[];
+  valid.forEach(m=>m.times.forEach(t=>slots.push({t,m})));
+  slots.sort((a,b)=>a.t.localeCompare(b.t));
+  if(!slots.length) return;
+  const grouped={};
+  slots.forEach(({t,m})=>{if(!grouped[t])grouped[t]=[];grouped[t].push(m);});
+
+  schEl.innerHTML='<div class="schedule-card">'+
+    Object.entries(grouped).map(([t,ms])=>{
+      const allTaken = ms.every(m=>getSlotStatus(m.id,t,dateStr)==='taken');
+      const isPast = t<=nowHHMM();
+      const timeStyle = allTaken?'color:var(--text-3);text-decoration:line-through':'';
+      const badge = allTaken
+        ? '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--accent-l);color:var(--accent-m);margin-left:6px">已服用</span>'
+        : isPast
+          ? '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--danger-l);color:var(--danger-m);margin-left:6px">已過時間</span>'
+          : '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--surface2);color:var(--text-3);margin-left:6px">待服用</span>';
+      return `<div class="schedule-slot">
+        <div class="slot-time" style="${timeStyle}">${t}${badge}</div>
+        <div class="slot-pills">${ms.map(m=>{
+          const st=getSlotStatus(m.id,t,dateStr);
+          return `<div class="slot-pill-row" style="${st==='taken'?'opacity:.45':''}">
+            <div class="slot-dot" style="background:${m.color}"></div>
+            <span>${m.name} ${m.dose}${m.unit}</span>
+          </div>`;
+        }).join('')}</div>
+      </div>`;
+    }).join('')+
+  '</div>';
+};
+
+/* ══════════════════════════════════
+   INIT
+══════════════════════════════════ */
+const loaded = loadData();
+if(loaded){
+  render();
+  document.getElementById('save-label').textContent='資料已載入';
+} else {
+  render();
+}
+
+// Run auto-deduct on load, then every 60 seconds
+runAutoDeduct();
+setInterval(runAutoDeduct, 60000);
+</script>
+</body>
+</html>
