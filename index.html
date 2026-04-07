@@ -614,8 +614,25 @@ body {
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-full" onclick="closeEditSheet()">取消</button>
+      <button class="btn btn-danger btn-full" onclick="deleteFromEdit()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        刪除藥物
+      </button>
       <button class="btn btn-primary btn-full" onclick="saveEdit()">儲存變更</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM DELETE MODAL ── -->
+<div class="alert-modal-overlay" id="delete-modal-overlay">
+  <div class="alert-modal">
+    <div class="alert-icon-circle" style="background:var(--danger-l);font-size:22px">🗑</div>
+    <div class="alert-title" style="color:var(--danger)">確定要刪除？</div>
+    <div class="alert-body" id="delete-modal-body">刪除後無法復原，該藥物的所有資料與服藥紀錄將一併清除。</div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-full" onclick="closeDeleteModal()">取消</button>
+      <button class="btn btn-full" id="delete-modal-confirm-btn"
+        style="background:var(--danger-m);border-color:var(--danger-m);color:#fff">確定刪除</button>
     </div>
   </div>
 </div>
@@ -713,6 +730,7 @@ function showPage(id){
 ══════════════════════════════════ */
 function renderHome(){
   const now = new Date();
+  const today_ = todayLocal(); // declared once for the entire function
   const dateEl = document.getElementById('dash-date');
   if(dateEl) dateEl.textContent = now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 
@@ -740,9 +758,10 @@ function renderHome(){
       <div class="stat-label" style="color:var(--accent-m)">庫存充足</div>
     </div>`;
 
-  // Schedule
+  // Schedule — only meds that have started on or before today
   const slots=[];
-  valid.forEach(m=>m.times.forEach(t=>slots.push({t,m})));
+  valid.filter(m=> !m.startDate || m.startDate <= today_)
+       .forEach(m=>m.times.forEach(t=>slots.push({t,m})));
   slots.sort((a,b)=>a.t.localeCompare(b.t));
   const grouped={};
   slots.forEach(({t,m})=>{if(!grouped[t])grouped[t]=[];grouped[t].push(m);});
@@ -751,43 +770,65 @@ function renderHome(){
     schEl.innerHTML='<div class="empty-state" style="padding:24px"><div class="empty-icon">📋</div>尚未設定用藥時程</div>';
   } else {
     schEl.innerHTML='<div class="schedule-card">'+
-      Object.entries(grouped).map(([t,ms])=>`
-        <div class="schedule-slot">
-          <div class="slot-time">${t}</div>
-          <div class="slot-pills">${ms.map(m=>`
-            <div class="slot-pill-row">
+      Object.entries(grouped).map(([t,ms])=>{
+        const allTaken = ms.every(m=>getSlotStatus(m.id,t,today_)==='taken');
+        const isPast = t<=nowHHMM();
+        const timeStyle = allTaken?'color:var(--text-3);text-decoration:line-through':'';
+        const badge = allTaken
+          ? '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--accent-l);color:var(--accent-m);margin-left:6px">已服用</span>'
+          : isPast
+            ? '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--danger-l);color:var(--danger-m);margin-left:6px">已過時間</span>'
+            : '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--surface2);color:var(--text-3);margin-left:6px">待服用</span>';
+        return `<div class="schedule-slot">
+          <div class="slot-time" style="${timeStyle}">${t}${badge}</div>
+          <div class="slot-pills">${ms.map(m=>{
+            const st=getSlotStatus(m.id,t,today_);
+            return `<div class="slot-pill-row" style="${st==='taken'?'opacity:.45':''}">
               <div class="slot-dot" style="background:${m.color}"></div>
               <span>${m.name} ${m.dose}${m.unit}</span>
-            </div>`).join('')}
-          </div>
-        </div>`).join('')+
-      '</div>';
+            </div>`;
+          }).join('')}</div>
+        </div>`;
+      }).join('')+
+    '</div>';
   }
 
   // Inventory dashboard
   const invEl = document.getElementById('home-inv');
-  if(!withStock.length){
+  const allWithStock = meds.filter(m=>m.name&&m.stock!==''&&m.stock!==null&&m.stock!==undefined);
+  if(!allWithStock.length){
     invEl.innerHTML='<div class="empty-state" style="padding:16px;text-align:center;color:var(--text-3);font-size:13px">設定庫存後顯示狀態</div>';
     return;
   }
-  const sorted = [...withStock].sort((a,b)=>{
+  const sorted2 = [...allWithStock].sort((a,b)=>{
+    const aStarted = !a.startDate || a.startDate <= today_;
+    const bStarted = !b.startDate || b.startDate <= today_;
+    if(aStarted !== bStarted) return aStarted ? -1 : 1;
     const ord={danger:0,warn:1,ok:2,none:3};
     return (ord[stockStatus(a)]??3)-(ord[stockStatus(b)]??3);
   });
-  invEl.innerHTML = sorted.map(m=>{
+  invEl.innerHTML = sorted2.map(m=>{
     const dl=daysLeft(m), ss=stockStatus(m);
+    const started = !m.startDate || m.startDate <= today_;
     const pct = dl!==null ? Math.min(100,Math.round(dl/Math.max(Number(m.alertDays||7)*4,30)*100)) : 0;
-    const dcolor = ss==='danger'?'var(--danger-m)':ss==='warn'?'var(--warn-m)':'var(--accent-m)';
-    return `<div class="inv-dash-card ${ss}">
+    const dcolor = !started?'var(--text-3)':ss==='danger'?'var(--danger-m)':ss==='warn'?'var(--warn-m)':'var(--accent-m)';
+    const daysUntil = !started
+      ? Math.round((new Date(m.startDate+'T12:00:00') - new Date(today_+'T12:00:00')) / 86400000)
+      : 0;
+    const rightLabel = !started
+      ? `<div style="font-size:11px;color:var(--warn);text-align:right;white-space:nowrap">${daysUntil}天後<br>開始</div>`
+      : `<div class="inv-days" style="color:${dcolor}">${ss==='danger'?'不足':dl!==null?dl+'天':'—'}</div>`;
+    const detailLine = !started
+      ? `開始日期：${m.startDate}　庫存 ${m.stock} ${m.unit}`
+      : `每日 ${dailyDose(m)} ${m.unit}　庫存 ${m.stock} ${m.unit}`;
+    return `<div class="inv-dash-card ${started?ss:''}" style="${!started?'opacity:.7':''}">
       <div class="inv-color" style="background:${m.color}"></div>
       <div class="inv-info">
-        <div class="inv-name">${m.name}</div>
-        <div class="inv-detail">每日 ${dailyDose(m)} ${m.unit}　庫存 ${m.stock} ${m.unit}</div>
-        <div class="inv-bar-wrap">
-          <div class="inv-bar-track"><div class="inv-bar-fill ${ss}" style="width:${pct}%"></div></div>
-        </div>
+        <div class="inv-name">${m.name}${!started?'　<span style="font-size:11px;padding:1px 7px;border-radius:100px;background:var(--warn-l);color:var(--warn)">尚未開始</span>':''}</div>
+        <div class="inv-detail">${detailLine}</div>
+        ${started?`<div class="inv-bar-wrap"><div class="inv-bar-track"><div class="inv-bar-fill ${ss}" style="width:${pct}%"></div></div></div>`:''}
       </div>
-      <div class="inv-days" style="color:${dcolor}">${ss==='danger'?'不足':dl+'天'}</div>
+      ${rightLabel}
     </div>`;
   }).join('');
 }
@@ -800,12 +841,31 @@ function renderMeds(){
   const em = document.getElementById('med-empty');
   if(!meds.length){ el.innerHTML=''; em.style.display='block'; return; }
   em.style.display='none';
-  el.innerHTML = meds.map(m=>`
-    <div class="med-card">
+  const today_ = todayLocal();
+  el.innerHTML = meds.map(m=>{
+    const started = !m.startDate || m.startDate <= today_;
+    const repeatTxt = m.repeat==='daily'?'每天':m.repeat==='weekdays'?'週一～五':'每週';
+    const startTxt = m.startDate || today_;
+    // Days until start (if not started yet)
+    const daysUntil = !started
+      ? Math.round((new Date(m.startDate+'T12:00:00') - new Date(today_+'T12:00:00')) / 86400000)
+      : 0;
+    const statusBadge = !started
+      ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:var(--warn-l);color:var(--warn);margin-left:6px;white-space:nowrap">${daysUntil}天後開始</span>`
+      : '';
+    return `
+    <div class="med-card" style="${!started?'opacity:.75':''}">
       <div class="med-card-color" style="background:${m.color}"></div>
       <div class="med-card-info">
-        <div class="med-card-name">${m.name||'（未命名）'}</div>
-        <div class="med-card-sub">${m.dose}${m.unit}／次　${m.times.length?m.times.join('、'):'未設定時間'}　${m.repeat==='daily'?'每天':m.repeat==='weekdays'?'週一～五':'每週'}</div>
+        <div class="med-card-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+          ${m.name||'（未命名）'}${statusBadge}
+        </div>
+        <div class="med-card-sub">
+          ${m.dose}${m.unit}／次　${m.times.length?m.times.join('、'):'未設定時間'}　${repeatTxt}
+        </div>
+        <div class="med-card-sub" style="margin-top:2px">
+          開始日期：${startTxt}${started?'　<span style="color:var(--accent-m)">服用中</span>':''}
+        </div>
       </div>
       <div class="med-card-actions">
         <button class="icon-btn" onclick="openEdit(${m.id})" title="編輯">
@@ -815,14 +875,45 @@ function renderMeds(){
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+function deleteFromEdit(){
+  if(editingId===null) return;
+  openDeleteModal(editingId, ()=>{
+    closeEditSheet();
+  });
 }
 
 function deleteMed(id){
-  if(!confirm('確定要刪除這個藥物嗎？')) return;
-  meds = meds.filter(m=>m.id!==id);
-  render(); renderMeds();
+  openDeleteModal(id, ()=>{});
 }
+
+function openDeleteModal(id, afterClose){
+  const m = meds.find(m=>m.id===id);
+  const body = document.getElementById('delete-modal-body');
+  if(body && m) body.textContent = `「${m.name}」刪除後無法復原，該藥物的所有資料將一併清除。`;
+  const btn = document.getElementById('delete-modal-confirm-btn');
+  // Remove any previous listener by cloning
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener('click', ()=>{
+    meds = meds.filter(m=>m.id!==id);
+    closeDeleteModal();
+    afterClose();
+    render();
+    renderMeds();
+  });
+  document.getElementById('delete-modal-overlay').classList.add('show');
+}
+
+function closeDeleteModal(){
+  document.getElementById('delete-modal-overlay').classList.remove('show');
+}
+document.getElementById('delete-modal-overlay').addEventListener('click', function(e){
+  if(e.target===this) closeDeleteModal();
+});
 
 /* ══════════════════════════════════
    STOCK PAGE
@@ -1125,14 +1216,19 @@ function todayLocal(){
 
 /* Should this med be active on a given YYYY-MM-DD? */
 function isActiveDay(m, dateStr){
-  if(m.repeat==='daily') return true;
+  // ── 第一關：開始日期檢查，未到開始日期一律不扣 ──
+  const start = (m.startDate || todayLocal());
+  if(dateStr < start) return false;
+
   const d = new Date(dateStr+'T12:00:00'); // noon avoids DST edge
   const dow = d.getDay(); // 0=Sun
-  if(m.repeat==='weekdays') return dow>=1&&dow<=5;
+
+  if(m.repeat==='daily') return true;
+  if(m.repeat==='weekdays') return dow>=1 && dow<=5;
   if(m.repeat==='weekly'){
-    const start = new Date((m.startDate||todayLocal())+'T12:00:00');
-    const diff = Math.round((d-start)/(86400000));
-    return diff>=0 && diff%7===0;
+    const startD = new Date(start+'T12:00:00');
+    const diff = Math.round((d - startD) / 86400000);
+    return diff >= 0 && diff % 7 === 0;
   }
   return true;
 }
@@ -1246,50 +1342,6 @@ function render(){
     if(ap.id==='page-stock') renderStock();
   }
 }
-
-/* ══════════════════════════════════
-   PATCH renderHome to show slot status
-══════════════════════════════════ */
-const _origRenderHome = renderHome;
-renderHome = function(){
-  _origRenderHome();
-  // Annotate schedule slots with taken/upcoming status
-  const dateStr = todayLocal();
-  const schEl = document.getElementById('home-schedule');
-  if(!schEl) return;
-
-  // Re-render schedule with status badges
-  const valid = meds.filter(m=>m.name&&m.times.length);
-  const slots=[];
-  valid.forEach(m=>m.times.forEach(t=>slots.push({t,m})));
-  slots.sort((a,b)=>a.t.localeCompare(b.t));
-  if(!slots.length) return;
-  const grouped={};
-  slots.forEach(({t,m})=>{if(!grouped[t])grouped[t]=[];grouped[t].push(m);});
-
-  schEl.innerHTML='<div class="schedule-card">'+
-    Object.entries(grouped).map(([t,ms])=>{
-      const allTaken = ms.every(m=>getSlotStatus(m.id,t,dateStr)==='taken');
-      const isPast = t<=nowHHMM();
-      const timeStyle = allTaken?'color:var(--text-3);text-decoration:line-through':'';
-      const badge = allTaken
-        ? '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--accent-l);color:var(--accent-m);margin-left:6px">已服用</span>'
-        : isPast
-          ? '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--danger-l);color:var(--danger-m);margin-left:6px">已過時間</span>'
-          : '<span style="font-size:11px;padding:2px 7px;border-radius:100px;background:var(--surface2);color:var(--text-3);margin-left:6px">待服用</span>';
-      return `<div class="schedule-slot">
-        <div class="slot-time" style="${timeStyle}">${t}${badge}</div>
-        <div class="slot-pills">${ms.map(m=>{
-          const st=getSlotStatus(m.id,t,dateStr);
-          return `<div class="slot-pill-row" style="${st==='taken'?'opacity:.45':''}">
-            <div class="slot-dot" style="background:${m.color}"></div>
-            <span>${m.name} ${m.dose}${m.unit}</span>
-          </div>`;
-        }).join('')}</div>
-      </div>`;
-    }).join('')+
-  '</div>';
-};
 
 /* ══════════════════════════════════
    INIT
